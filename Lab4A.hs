@@ -7,6 +7,7 @@ import Test.QuickCheck
 
 -- Use the following simpllowing simple data type for binary operators
 data BinOp = AddOp | MulOp
+  deriving (Eq)
 
 ------------------------------------------------------------------
 -- A1 ( Define a data type Expr which represents three kinds of expression:
@@ -18,6 +19,7 @@ data BinOp = AddOp | MulOp
 data Expr = Num Int
           | Exponent Int
           | Op BinOp Expr Expr
+  deriving (Eq)
 
 ------------------------------------------------------------------
 -- A2  Define the data type invariant that checks that exponents are never negative
@@ -131,22 +133,28 @@ polyToExpr poly
                                           (polyToExpr(fromList(tail(toList poly))))
 -}
 
-{- Här har du den som är fin, ditt lilla glin
+-- Här har du den som är fin, ditt lilla glin
 listToExpr :: [Int] -> Expr
 listToExpr []     = Num 0
 listToExpr (p:[]) = Num p
 listToExpr (0:ps) = polyToExpr $ fromList ps
-listToExpr (p:ps) = Op AddOp (Op MulOp (Num p) (Exponent $ (length (p:ps))-1)) (polyToExpr $ fromList ps)
+listToExpr (1:ps)
+  | all (==0) ps  = Exponent (length ps)
+  | otherwise     = Op AddOp (Exponent (length ps)) (polyToExpr(fromList ps))
+listToExpr (p:ps)
+  | all (==0) ps  = Op MulOp (Num p) (Exponent (length ps))
+  | otherwise     = Op AddOp (Op MulOp (Num p) (Exponent (length ps))) (polyToExpr(fromList ps))
+
 
 polyToExpr :: Poly -> Expr
 polyToExpr poly = listToExpr $ toList poly
--}
 
+{-
 polyToExpr :: Poly -> Expr
 polyToExpr poly
   | pss        == []                 = Num 0
   | length (pss) == 1                = Num p
-  | (p > 1 || p < 0) && all (==0) ps = Op MulOp (Num p) (Exponent (length(pss)-1))
+  | (p > 1 || p < 0) && all (==0) ps = Op MulOp (Num p) (Exponent (length(ps)))
   | (p > 1 || p < 0)                 = Op AddOp (Op MulOp (Num p) (Exponent (length(pss)-1)))
                                          (polyToExpr(fromList ps))
   | p == 1 && all (==0) ps           = Exponent (length(pss)-1)
@@ -158,6 +166,7 @@ polyToExpr poly
       p = head $ pss
       ps = tail $ pss
       
+-}
 
 prop_polyToExpr :: Int -> Poly -> Bool
 prop_polyToExpr n poly = evalPoly n poly == eval n (polyToExpr poly)
@@ -184,6 +193,20 @@ simplify expr = polyToExpr . exprToPoly $ expr
 --power zero. (You may need to fix A07)
 
 prop_noJunk :: Expr -> Bool
-prop_noJunk expr = undefined
 
-------------------------------------------------------------------
+prop_noJunk (Op AddOp expr1 (Num 0)) = simplify (Op AddOp expr1 (Num 0)) == simplify expr1
+prop_noJunk (Op AddOp (Num 0) expr2) = simplify (Op AddOp (Num 0) expr2) == simplify expr2
+
+prop_noJunk (Op MulOp expr1 (Num 0)) = simplify (Op MulOp expr1 (Num 0)) == simplify (Num 0)
+prop_noJunk (Op MulOp (Num 0) expr2) = simplify (Op MulOp (Num 0) expr2) == simplify (Num 0)
+
+prop_noJunk (Op MulOp expr1 (Num 1)) = simplify (Op MulOp expr1 (Num 1)) == simplify expr1
+prop_noJunk (Op MulOp (Num 1) expr2) = simplify (Op MulOp (Num 1) expr2) == simplify expr2
+
+prop_noJunk (Exponent 0)             = simplify (Exponent 0)             == simplify (Num 1)
+
+prop_noJunk (Exponent e)             = simplify (Exponent e)             == simplify (Exponent e)
+prop_noJunk (Num n)                  = simplify (Num n)                  == simplify (Num n)
+
+prop_noJunk (Op MulOp expr1 expr2)   = prop_noJunk expr1 && prop_noJunk expr2
+prop_noJunk (Op AddOp expr1 expr2)   = prop_noJunk expr1 && prop_noJunk expr2
