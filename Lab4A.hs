@@ -1,5 +1,5 @@
 -- Authors: Nicklas Botö, Carl Wiede, Adam Ryden
--- Date:
+-- Date: 2018-10-19
 
 import Poly
 import Test.QuickCheck
@@ -45,8 +45,6 @@ instance Show Expr where
   show (Exponent 1)               = "x"
   show (Exponent expo)            = "x^" ++ show expo
 
-  -- TODO: Om man ska ha kvar caset med t.ex. expr * 0, se över
-        -- parenteser på enskilda Ints
 
 -- showFactor is used to display parentheses around
 -- multiplicative expressions in a correct manner
@@ -91,6 +89,7 @@ rExpr s = frequency [(1,rNum),(s,rBin),(s,rExpo)]
 
 ------------------------------------------------------------------
 -- A5 Define the eval function which takes a value for x and an expression and evaluates it
+
 eval :: Int -> Expr -> Int
 eval x (Num n)                = n
 eval x (Op AddOp expr1 expr2) = eval x expr1 + eval x expr2
@@ -98,7 +97,7 @@ eval x (Op MulOp expr1 expr2) = eval x expr1 * eval x expr2
 eval x (Exponent e)           = x ^ e
 
 
-------------------------------------------undefined------------------------
+------------------------------------------------------------------
 -- A6 Define
 -- Which converts an expression into a polynomial.
 -- Here it is important to think recursively to just solve the bigger problem
@@ -122,18 +121,7 @@ prop_exprToPoly n expr = eval n expr == evalPoly n (exprToPoly expr)
 
 -- Write (and check) a quickCheck property prop_polyToExpr for this function similar to that for A6.
 
-{-
 
-polyToExpr :: Poly -> Expr
-polyToExpr poly
-  | toList poly          == [] = Num 0
-  | length (toList poly) == 1  = Num (head $ toList poly)
-  | head(toList poly)    == 0  = polyToExpr(fromList(tail(toList poly)))
-  | otherwise                  = Op AddOp (Op MulOp (Num (head(toList poly))) (Exponent (length(toList poly)-1)))
-                                          (polyToExpr(fromList(tail(toList poly))))
--}
-
--- Här har du den som är fin, ditt lilla glin
 listToExpr :: [Int] -> Expr
 listToExpr []     = Num 0
 listToExpr (p:[]) = Num p
@@ -146,42 +134,26 @@ listToExpr (p:ps)
   | otherwise     = Op AddOp (Op MulOp (Num p) (Exponent (length ps))) (polyToExpr(fromList ps))
 
 
+-- polyToExpr turns the input poly into an [Int]
+-- for the listToExpr function to make pattern matching available
+
 polyToExpr :: Poly -> Expr
 polyToExpr poly = listToExpr $ toList poly
 
-{-
-polyToExpr :: Poly -> Expr
-polyToExpr poly
-  | pss        == []                 = Num 0
-  | length (pss) == 1                = Num p
-  | (p > 1 || p < 0) && all (==0) ps = Op MulOp (Num p) (Exponent (length(ps)))
-  | (p > 1 || p < 0)                 = Op AddOp (Op MulOp (Num p) (Exponent (length(pss)-1)))
-                                         (polyToExpr(fromList ps))
-  | p == 1 && all (==0) ps           = Exponent (length(pss)-1)
-  | p == 1                           = Op AddOp (Exponent (length(pss)-1)) (polyToExpr(fromList ps))
-  | otherwise                        = polyToExpr(fromList ps)
-
-    where
-      pss = toList poly
-      p = head $ pss
-      ps = tail $ pss
-      
--}
+-- prop_polyToExpr tests if the value of the input poly
+-- is the same as when it is converted to an expression
 
 prop_polyToExpr :: Int -> Poly -> Bool
 prop_polyToExpr n poly = evalPoly n poly == eval n (polyToExpr poly)
 
   
 ------------------------------------------------------------------
---v-- A8 write a function
-
-{-
-write a function simplify :: Expr -> Expr which simplifies an 
-expression by converting it to a polynomial and back again (this is easy).
--}
+-- A8 write a function simplify :: Expr -> Expr which simplifies an 
+-- expression by converting it to a polynomial and back again (this is easy).
 
 simplify :: Expr -> Expr
 simplify expr = polyToExpr . exprToPoly $ expr
+
 
 ------------------------------------------------------------------
 -- A9 write a function
