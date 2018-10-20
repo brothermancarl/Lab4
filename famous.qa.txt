@@ -1,0 +1,1 @@
+Tree (QorN "Is she from Europe? ") (Tree (QorN "Is she a scientist? ") (QorN "Marie Curie") (QorN "Queen Elisabeth II")) (Tree (QorN "Is she an actress? ") (QorN "Marilyn Monroe") (QorN "Hillary Clinton"))
