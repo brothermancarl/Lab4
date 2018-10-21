@@ -8,7 +8,12 @@ import Prelude hiding (readFile)           -- hiding the Prelude version
 import System.IO hiding (readFile)         -- of "readFile" allows the
 import System.IO.Strict (readFile)         -- importing of the strict
 import System.IO.Error                     -- version, fixing an IO
-                                           -- error that was generated.
+import Control.Exception                   -- error that was generated.
+                                          
+-- known bug:
+    -- inputting quotation marks when you submit
+    -- an additional question/name to the tree
+    -- will cause a recurring error parse error.
 
 ------------------------------------------------------
 
@@ -36,8 +41,8 @@ instance Show QA where
 
 -- The "base case" QA according to the assignment
 
-defaultTree :: QA
-defaultTree = Tree (QorN "Is she from Europe?") 
+defaultQA :: QA
+defaultQA = Tree (QorN "Is she from Europe?") 
 
                    (Tree (QorN "Is she a scientist?") 
                          (QorN "Marie Curie") 
@@ -98,14 +103,14 @@ play (QorN name) =
           else
             do
               putStrLn "Bye!"
-              return $ stringToQA "(QorN \"exit\")"
+              return $ QorN "exit"
     else
       do
         putStrLn "OK - you won this time."
         newname <- question "Just curious: Who was your famous person?"
         newquestion <- question ("Give me a question for which the answer for "
                                 ++ newname ++ " is \"yes\"\nand the answer for "
-                                 ++ name ++     " is \"no\".")
+                                 ++ name ++     " is \"no\".\n")
         currQA <- getCurrQA
         alterFile $ genNewQA currQA (QorN name) (QorN newname) (QorN newquestion)
         playagain <- yesNoQuestion ("Play again?")
@@ -116,7 +121,7 @@ play (QorN name) =
           else
             do
               putStrLn "Bye!"
-              return $ stringToQA "(QorN \"exit\")"
+              return $ QorN "exit"
 
 
 play (Tree (QorN question) qa1 qa2) =
@@ -133,8 +138,10 @@ play (Tree (QorN question) qa1 qa2) =
 getCurrQA :: IO QA
 getCurrQA =
   do
-    qatext <- readFile "famous.qa.txt"
-    return $ stringToQA qatext
+    tryqatext <- try $ readFile "famous.qa.txt"
+    case tryqatext of
+      Left e -> error $ "Source file error: " ++ ioeGetErrorString e
+      Right s -> return $ stringToQA s
 
 
 ------------------------------------------------------
@@ -144,6 +151,7 @@ getCurrQA =
 
 stringToQA :: String -> QA
 stringToQA qatext = read qatext :: QA
+
 
 ------------------------------------------------------
 
