@@ -77,13 +77,10 @@ yesNoQuestion :: String -> IO Bool
 yesNoQuestion q =
   do
     ans <- question q
-    yesNoQuestion' ans
-    where
-      yesNoQuestion' :: String -> IO Bool
-      yesNoQuestion' ans
-        | ans == "yes" = return True
-        | ans == "no"  = return False
-        | otherwise    = yesNoQuestion "Please answer yes or no!"
+    case ans of
+      "yes" -> return True
+      "no"  -> return False
+      _     -> yesNoQuestion "Please answer yes or no!"
 
 ------------------------------------------------------
 
