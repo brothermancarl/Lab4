@@ -9,11 +9,15 @@ import System.IO hiding (readFile)         -- of "readFile" allows the
 import System.IO.Strict (readFile)         -- importing of the strict
 import System.IO.Error                     -- version, fixing an IO
 import Control.Exception                   -- error that was generated.
-                                          
+import Control.Monad
+                   
+-- (install cabal strict)
+
 -- known bug:
     -- inputting quotation marks when you submit
     -- an additional question/name to the tree
     -- will cause a recurring error parse error.
+    -- (USE SINGLE QUOTES=)
 
 ------------------------------------------------------
 
@@ -36,8 +40,6 @@ instance Show QA where
   show (Tree q qa1 qa2)      = "Question: " ++ show q ++ ": (" ++ show qa1 ++ ") (" ++ show qa2 ++ ")"
 
 ------------------------------------------------------
-
-
 
 -- The "base case" QA according to the assignment
 
@@ -62,8 +64,7 @@ question q =
   do
     putStr (q ++ " ")
     hFlush stdout
-    ans <- getLine
-    return ans
+    getLine
 
 
 ------------------------------------------------------
@@ -78,11 +79,19 @@ yesNoQuestion q =
   do
     ans <- question q
     case ans of
-      "yes" -> return True
-      "no"  -> return False
-      _     -> yesNoQuestion "Please answer yes or no!"
+        "yes" -> return True
+        "no"  -> return False
+        _     -> yesNoQuestion "Please answer yes or no!"
 
 ------------------------------------------------------
+
+-- When a tree is input to play, it will simply move
+-- further down to the QA according to the yes/no
+-- answer. When it reaches a name, the computer will
+-- either win or not. If not, you can input the new
+-- name and the question that distinguishes it with
+-- the guess. If yes, you will simply be able to play
+-- again or not.
 
 play :: QA -> IO QA
 play (QorN name) =
@@ -92,15 +101,7 @@ play (QorN name) =
     then
       do
         putStrLn "Hurray! I won!"
-        playagain <- yesNoQuestion ("Play again?")
-        if playagain 
-          then
-            do
-              return (QorN "yay")
-          else
-            do
-              putStrLn "Bye!"
-              return $ QorN "exit"
+        playAgain
     else
       do
         putStrLn "OK - you won this time."
@@ -110,15 +111,7 @@ play (QorN name) =
                                  ++ name ++     " is \"no\".\n")
         currQA <- getCurrQA
         alterFile $ genNewQA currQA (QorN name) (QorN newname) (QorN newquestion)
-        playagain <- yesNoQuestion ("Play again?")
-        if playagain 
-          then
-            do
-              return (QorN "yay")
-          else
-            do
-              putStrLn "Bye!"
-              return $ QorN "exit"
+        playAgain
 
 
 play (Tree (QorN question) qa1 qa2) =
@@ -129,13 +122,32 @@ play (Tree (QorN question) qa1 qa2) =
 
 ------------------------------------------------------
 
+-- since the user is asked the question to play again
+-- twice, it was simplified to one function and is
+-- called at the end of both of the finalizing
+-- do blocks in the play function
+
+playAgain :: IO QA
+playAgain =
+    do
+      playagain <- yesNoQuestion "Play again?"
+      if playagain 
+        then
+            return (QorN "yay")
+        else
+          do
+            putStrLn "Bye!"
+            return $ QorN "exit"
+
+------------------------------------------------------
+
 -- getCurrQA is used to get the currect version of 
 -- the play QA
 
 getCurrQA :: IO QA
 getCurrQA =
   do
-    tryqatext <- try $ readFile "famous.qa.txt"
+    tryqatext <- try $ readFile "famous.qa"
     case tryqatext of
       Left e -> error $ "Source file error: " ++ ioeGetErrorString e
       Right s -> return $ stringToQA s
@@ -163,15 +175,12 @@ qaToString (Tree q qa1 qa2) = "Tree (" ++ qaToString q ++ ") "
 
 ------------------------------------------------------
 
--- writeFile takes the new QA, turns it into a correct
--- String, then overwrites the old "famous.qa.txt" with
+-- alterFile takes the new QA, turns it into a correct
+-- String, then overwrites the old "famous.qa" with
 -- the updated one
 
 alterFile :: QA -> IO ()
-alterFile newtree =
-  do
-    writeFile "famous.qa.txt" (qaToString newtree)
-
+alterFile newtree = writeFile "famous.qa" (qaToString newtree)
 
 ------------------------------------------------------
 
@@ -182,7 +191,7 @@ alterFile newtree =
 genNewQA :: QA -> QA -> QA -> QA -> QA
 
 genNewQA (QorN name) oldN newN newQ
-  | show name == show oldN = (Tree newQ newN oldN)
+  | show name == show oldN = Tree newQ newN oldN
   | otherwise              = QorN name
 
 genNewQA (Tree q qa1 qa2) oldN newN newQ = Tree q (genNewQA qa1 oldN newN newQ) 
@@ -191,16 +200,15 @@ genNewQA (Tree q qa1 qa2) oldN newN newQ = Tree q (genNewQA qa1 oldN newN newQ)
 
 ------------------------------------------------------
 
+-- main function of IO() data type, allowing file to be
+-- run with the runhaskell command
+
 main :: IO ()
 main =
   do
     putStrLn "Think of a famous person! I will ask you questions about her."
     playQA <- getCurrQA
     playagain <- play playQA
-    if (show playagain == ("\"exit\"")) 
-      then 
-        return ()
-      else
-        main
+    unless show playagain == "\"exit\"" main
 
 -- YOU DON'T KNOW WHERE I'VE BEEN, LOU
