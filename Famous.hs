@@ -133,7 +133,7 @@ playAgain =
       playagain <- yesNoQuestion "Play again?"
       if playagain 
         then
-            return (QorN "yay")
+            return $ QorN "yay"
         else
           do
             putStrLn "Bye!"
@@ -209,6 +209,6 @@ main =
     putStrLn "Think of a famous person! I will ask you questions about her."
     playQA <- getCurrQA
     playagain <- play playQA
-    unless show playagain == "\"exit\"" main
+    unless (show playagain == "\"exit\"") main
 
 -- YOU DON'T KNOW WHERE I'VE BEEN, LOU
